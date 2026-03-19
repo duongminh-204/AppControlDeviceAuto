@@ -121,7 +121,7 @@ export default function HomeScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#0F172A', dark: '#020617' }}
+      headerBackgroundColor={{ light: '#F0FDF4', dark: '#F0FDF4' }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
@@ -129,7 +129,7 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Dashboard</ThemedText>
+        <ThemedText type="title">Vina Smart soil</ThemedText>
         <HelloWave />
       </ThemedView>
 
@@ -210,8 +210,10 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
     marginBottom: 20,
+    paddingHorizontal: 4,
   },
   section: {
     marginBottom: 28,
@@ -220,30 +222,30 @@ const styles = StyleSheet.create({
   gaugesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     gap: 12,
   },
   togglesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 20,
+    justifyContent: 'space-between',
+    gap: 16,
   },
   toggleCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)', // Hỗ trợ dark mode
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 16,
-    width: width * 0.42, // Responsive card
+    borderRadius: 20,
+    width: width * 0.44,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
   },
   reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
+    height: 160,
+    width: 260,
+    bottom: -10,
     left: 0,
     position: 'absolute',
   },
