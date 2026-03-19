@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet, Switch, View, Dimensions } from 'react-native';
+import { StyleSheet, Switch, View, Dimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 
 import Svg, { Circle, Text as SvgText } from 'react-native-svg';
@@ -10,10 +10,10 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 const { width } = Dimensions.get('window');
 
@@ -26,11 +26,14 @@ interface GaugeProps {
   label: string;
   unit: string;
   color: string;
+  icon: string;
+  size?: number;
 }
 
-function Gauge({ value, maxValue, label, unit, color }: GaugeProps) {
-  const size = Math.min(width * 0.28, 140); // Responsive theo mọi màn hình (iPhone 15, Android nhỏ/lớn)
-  const radius = (size - 20) / 2;
+function Gauge({ value, maxValue, label, unit, color, icon, size }: GaugeProps) {
+  const gaugeSize = size ?? Math.min(width * 0.28, 140); // Responsive theo mọi màn hình
+  const textColor = useThemeColor({}, 'text');
+  const radius = (gaugeSize - 20) / 2;
   const strokeWidth = 12;
   const circumference = 2 * Math.PI * radius;
 
@@ -52,12 +55,12 @@ function Gauge({ value, maxValue, label, unit, color }: GaugeProps) {
   });
 
   return (
-    <View style={{ alignItems: 'center', marginBottom: 16 }}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <View style={{ alignItems: 'center', marginBottom: 16, width: gaugeSize }}>
+      <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
         {/* Vòng nền xám */}
         <Circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={gaugeSize / 2}
+          cy={gaugeSize / 2}
           r={radius}
           stroke="#E0E0E0"
           strokeWidth={strokeWidth}
@@ -66,8 +69,8 @@ function Gauge({ value, maxValue, label, unit, color }: GaugeProps) {
 
         {/* Vòng tiến độ có animation */}
         <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
+          cx={gaugeSize / 2}
+          cy={gaugeSize / 2}
           r={radius}
           stroke={color}
           strokeWidth={strokeWidth}
@@ -75,25 +78,28 @@ function Gauge({ value, maxValue, label, unit, color }: GaugeProps) {
           strokeDasharray={circumference}
           animatedProps={animatedProps}
           strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`} // Kim bắt đầu từ đỉnh
+          transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} // Kim bắt đầu từ đỉnh
         />
 
         {/* Giá trị chính giữa (animation khi value thay đổi) */}
         <SvgText
-          x={size / 2}
-          y={size / 2 + 6}
+          x={gaugeSize / 2}
+          y={gaugeSize / 2 + 6}
           textAnchor="middle"
           fontSize={20}
           fontWeight="700"
-          fill="#111"
+          fill={textColor}
         >
           {Math.round(value)}{unit}
         </SvgText>
       </Svg>
 
-      <ThemedText type="subtitle" style={{ marginTop: 8, textAlign: 'center' }}>
-        {label}
-      </ThemedText>
+      <View style={styles.gaugeLabelRow}>
+        <ThemedText style={styles.gaugeIconText}>{icon}</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.gaugeLabelText}>
+          {label}
+        </ThemedText>
+      </View>
     </View>
   );
 }
@@ -103,6 +109,7 @@ export default function HomeScreen() {
   const [temperature, setTemperature] = useState(26.5);
   const [humidity, setHumidity] = useState(64);
   const [soilMoisture, setSoilMoisture] = useState(42);
+  const gaugeSize = Math.min(width * 0.28, 140);
 
   // Trạng thái toggle
   const [manualControl, setManualControl] = useState(false);
@@ -121,16 +128,17 @@ export default function HomeScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#F0FDF4', dark: '#F0FDF4' }}
+      headerBackgroundColor={{ light: '#FFFFFF', dark: '#151718' }}
       headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
+        <View style={styles.headerLogoWrapper}>
+          <Image
+            source={require('@/assets/images/LogoVinaSoil.png')}
+            style={styles.headerLogo}
+          />
+        </View>
       }>
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Vina Smart soil</ThemedText>
-        <HelloWave />
       </ThemedView>
 
       <ThemedView style={styles.section}>
@@ -138,13 +146,16 @@ export default function HomeScreen() {
           Chỉ số cảm biến thời gian thực
         </ThemedText>
 
-        <View style={styles.gaugesContainer}>
+        <View>
+          <View style={styles.gaugesRow}>
           <Gauge
             value={temperature}
             maxValue={50}
             label="Temperature"
             unit="°C"
             color="#FF3B5C"
+            icon="🌡️"
+            size={gaugeSize}
           />
           <Gauge
             value={humidity}
@@ -152,14 +163,23 @@ export default function HomeScreen() {
             label="Humidity"
             unit="%"
             color="#4A90E2"
+            icon="💧"
+            size={gaugeSize}
           />
-          <Gauge
-            value={soilMoisture}
-            maxValue={100}
-            label="Soil Moisture"
-            unit="%"
-            color="#50C878"
-          />
+          </View>
+
+          <View style={styles.gaugesRow}>
+            <Gauge
+              value={soilMoisture}
+              maxValue={100}
+              label="Soil Moisture"
+              unit="%"
+              color="#50C878"
+              icon="🌱"
+              size={gaugeSize}
+            />
+            <View style={{ width: gaugeSize }} />
+          </View>
         </View>
       </ThemedView>
 
@@ -175,12 +195,18 @@ export default function HomeScreen() {
             <Switch
               value={manualControl}
               onValueChange={setManualControl}
-              trackColor={{ false: '#767577', true: '#34C759' }}
+              trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
               thumbColor={manualControl ? '#FFFFFF' : '#F4F3F4'}
-              ios_backgroundColor="#3E3E3E"
+              ios_backgroundColor="#E5E7EB"
               style={{ transform: [{ scale: 1.2 }] }} // Animation scale đẹp hơn
             />
-            <ThemedText style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            <ThemedText
+              style={{
+                fontSize: 12,
+                opacity: 0.85,
+                marginTop: 4,
+                color: manualControl ? '#16A34A' : '#6B7280',
+              }}>
               {manualControl ? 'Bật - Điều khiển thủ công' : 'Tắt'}
             </ThemedText>
           </View>
@@ -191,12 +217,18 @@ export default function HomeScreen() {
             <Switch
               value={pumpAuto}
               onValueChange={setPumpAuto}
-              trackColor={{ false: '#767577', true: '#34C759' }}
+              trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
               thumbColor={pumpAuto ? '#FFFFFF' : '#F4F3F4'}
-              ios_backgroundColor="#3E3E3E"
+              ios_backgroundColor="#E5E7EB"
               style={{ transform: [{ scale: 1.2 }] }}
             />
-            <ThemedText style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            <ThemedText
+              style={{
+                fontSize: 12,
+                opacity: 0.85,
+                marginTop: 4,
+                color: pumpAuto ? '#16A34A' : '#6B7280',
+              }}>
               {pumpAuto ? 'Bật - Bơm tự động' : 'Tắt'}
             </ThemedText>
           </View>
@@ -207,6 +239,16 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerLogoWrapper: {
+    height: '100%',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 120,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -219,11 +261,10 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     gap: 8,
   },
-  gaugesContainer: {
+  gaugesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'flex-start',
   },
   togglesContainer: {
     flexDirection: 'row',
@@ -233,20 +274,31 @@ const styles = StyleSheet.create({
   toggleCard: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 20,
+    padding: 20,
+    borderRadius: 24,
     width: width * 0.44,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  reactLogo: {
-    height: 160,
-    width: 260,
-    bottom: -10,
-    left: 0,
-    position: 'absolute',
+  gaugeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  gaugeIconText: {
+    fontSize: 18,
+    // ThemedText will apply theme color to the emoji glyph, but most platforms still render emoji colors.
+    // If emoji appears monochrome on your device, user can switch to different icon later.
+  },
+  gaugeLabelText: {
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

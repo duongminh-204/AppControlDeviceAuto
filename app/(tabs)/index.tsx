@@ -22,7 +22,8 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE_URL = 'https://your-api-url.com'; 
+
+const API_BASE_URL = 'http://192.168.0.103:3000';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -35,7 +36,7 @@ export default function LoginScreen() {
         const token = await AsyncStorage.getItem('authToken');
         if (!token) return;
 
-       
+     
         try {
           const res = await fetch(`${API_BASE_URL}/me`, {
             headers: {
