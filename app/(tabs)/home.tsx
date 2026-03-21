@@ -177,7 +177,7 @@ export default function HomeScreen() {
       </ThemedView>
 
       {/* Device Controls */}
-      <ThemedView style={styles.section}>
+      <ThemedView style={[styles.section, styles.lastSection]}>
         <ThemedText type="subtitle" style={{ marginBottom: 20 }}>
           Điều khiển thiết bị
         </ThemedText>
@@ -254,6 +254,9 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 28,
     gap: 8,
+  },
+  lastSection: {
+    marginBottom: 100, // Thêm padding bottom để tránh bị che bởi tab bar
   },
   gaugesRow: {
     flexDirection: 'row',

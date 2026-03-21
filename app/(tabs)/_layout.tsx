@@ -1,6 +1,6 @@
 import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
 
@@ -14,9 +14,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarStyle: {
           position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: 12,
+          left: 0,
+          right: 0,
+          bottom: 0,
           borderTopWidth: 0,
           elevation: 0,
           shadowColor: '#000',
@@ -24,10 +24,11 @@ export default function TabLayout() {
           shadowOpacity: 0.12,
           shadowRadius: 18,
           backgroundColor: colorScheme === 'dark' ? '#020617' : '#FFFFFF',
-          borderRadius: 24,
+          borderRadius: 0,
           paddingBottom: 10,
           paddingTop: 8,
           height: 70,
+          paddingHorizontal: 16,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerShown: false,
