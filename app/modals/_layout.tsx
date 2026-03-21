@@ -6,10 +6,11 @@ export default function ModalsLayout() {
       screenOptions={{
         presentation: 'modal',
         headerShown: false,
-        animation: 'slide_from_bottom', // hoặc 'fade'
+        animation: 'slide_from_bottom',
       }}
     >
-      <Stack.Screen name="info" options={{ title: 'Thông tin' }} />
+      <Stack.Screen name="modal" options={{ title: 'Modal' }} />
+      <Stack.Screen name="scan-qr" options={{ title: 'Quét mã QR' }} />
     </Stack>
   );
 }

@@ -91,7 +91,7 @@ const Gauge = memo(function Gauge({
         />
       </Svg>
 
-      {/* Center value text - viết liền mạch, không xuống dòng thừa */}
+      {/* Center value text */}
       <ThemedText
         style={{
           position: 'absolute',
@@ -163,7 +163,6 @@ export default function HomeScreen() {
         />
       }
     >
-
       {/* Sensor Gauges */}
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle" style={{ marginBottom: 16 }}>
@@ -177,28 +176,32 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.gaugesRow}>
-            <Gauge value={soilMoisture} maxValue={GAUGE_CONFIG.soilMoisture.maxValue} label={GAUGE_CONFIG.soilMoisture.label} unit={GAUGE_CONFIG.soilMoisture.unit} color={soilMoisture < 30 ? '#FF3B5C' : GAUGE_CONFIG.soilMoisture.color} icon={GAUGE_CONFIG.soilMoisture.icon} />
+            <Gauge
+              value={soilMoisture}
+              maxValue={GAUGE_CONFIG.soilMoisture.maxValue}
+              label={GAUGE_CONFIG.soilMoisture.label}
+              unit={GAUGE_CONFIG.soilMoisture.unit}
+              color={soilMoisture < 30 ? '#FF3B5C' : GAUGE_CONFIG.soilMoisture.color}
+              icon={GAUGE_CONFIG.soilMoisture.icon}
+            />
             <View style={{ width: GAUGE_SIZE_BASE }} /> {/* placeholder cho layout cân đối */}
           </View>
         </View>
 
-        {/* Soil Moisture Suggestion */}
-        {(() => {
-          console.log('Soil Moisture:', soilMoisture, 'Show suggestion:', soilMoisture < 30);
-          return soilMoisture < 100 && (
-            <ThemedView style={styles.suggestion}>
-              <Ionicons name="water" size={24} color="#FF3B5C" style={styles.suggestionIcon} />
-              <View style={styles.suggestionTextContainer}>
-                <ThemedText type="defaultSemiBold" style={styles.suggestionTitle}>
-                  Đề xuất
-                </ThemedText>
-                <ThemedText style={styles.suggestionMessage}>
-                  Tưới nước cho đất để duy trì độ ẩm
-                </ThemedText>
-              </View>
-            </ThemedView>
-          );
-        })()}
+        {/* Soil Moisture Suggestion - ĐÃ SỬA LỖI TEXT STRING */}
+        {soilMoisture < 30 ? (
+          <ThemedView style={styles.suggestion}>
+            <Ionicons name="water" size={24} color="#FF3B5C" style={styles.suggestionIcon} />
+            <View style={styles.suggestionTextContainer}>
+              <ThemedText type="defaultSemiBold" style={styles.suggestionTitle}>
+                Đề xuất
+              </ThemedText>
+              <ThemedText style={styles.suggestionMessage}>
+                Tưới nước cho đất để duy trì độ ẩm
+              </ThemedText>
+            </View>
+          </ThemedView>
+        ) : null}
       </ThemedView>
 
       {/* Device Controls */}
@@ -209,7 +212,12 @@ export default function HomeScreen() {
 
         <View style={styles.togglesContainer}>
           <View style={styles.toggleCard}>
-            <ThemedText type="defaultSemiBold" style={{ fontWeight: 'bold', color: '#000000' }}>Manual Control</ThemedText>
+            <ThemedText 
+              type="defaultSemiBold" 
+              style={{ fontWeight: 'bold', color: '#000000' }}
+            >
+              Manual Control
+            </ThemedText>
             <Switch
               value={manualControl}
               onValueChange={setManualControl}
@@ -218,20 +226,27 @@ export default function HomeScreen() {
               ios_backgroundColor="#E5E7EB"
               style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
             />
-            <ThemedText
-              style={{
-                fontSize: 12,
-                opacity: 0.85,
-                marginTop: 4,
-                color: manualControl ? '#16A34A' : '#6B7280',
-              }}
-            >
-              {manualControl ? 'Bật - Điều khiển thủ công' : 'Tắt'}
-            </ThemedText>
+            <View>
+              <ThemedText
+                style={{
+                  fontSize: 12,
+                  opacity: 0.85,
+                  marginTop: 4,
+                  color: manualControl ? '#16A34A' : '#6B7280',
+                }}
+              >
+                {manualControl ? 'Bật - Điều khiển thủ công' : 'Tắt'}
+              </ThemedText>
+            </View>
           </View>
 
           <View style={styles.toggleCard}>
-            <ThemedText type="defaultSemiBold" style={{ fontWeight: 'bold', color: '#000000' }}>Pump Auto</ThemedText>
+            <ThemedText 
+              type="defaultSemiBold" 
+              style={{ fontWeight: 'bold', color: '#000000' }}
+            >
+              Pump Auto
+            </ThemedText>
             <Switch
               value={pumpAuto}
               onValueChange={setPumpAuto}
@@ -240,16 +255,18 @@ export default function HomeScreen() {
               ios_backgroundColor="#E5E7EB"
               style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
             />
-            <ThemedText
-              style={{
-                fontSize: 12,
-                opacity: 0.85,
-                marginTop: 4,
-                color: pumpAuto ? '#16A34A' : '#6B7280',
-              }}
-            >
-              {pumpAuto ? 'Bật - Bơm tự động' : 'Tắt'}
-            </ThemedText>
+            <View>
+              <ThemedText
+                style={{
+                  fontSize: 12,
+                  opacity: 0.85,
+                  marginTop: 4,
+                  color: pumpAuto ? '#16A34A' : '#6B7280',
+                }}
+              >
+                {pumpAuto ? 'Bật - Bơm tự động' : 'Tắt'}
+              </ThemedText>
+            </View>
           </View>
         </View>
       </ThemedView>
@@ -258,30 +275,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerLogoWrapper: {
-    height: '100%',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerLogo: {
-    width: 120,
-    height: 120,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 20,
-    paddingHorizontal: 4,
-  },
   section: {
     marginBottom: 28,
     gap: 8,
   },
   lastSection: {
-    marginBottom: 100, // Thêm padding bottom để tránh bị che bởi tab bar
+    marginBottom: 100,
   },
   gaugesRow: {
     flexDirection: 'row',
