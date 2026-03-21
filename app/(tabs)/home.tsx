@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { memo, useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Switch, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -6,6 +6,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
+import DeviceHeader from '@/components/DeviceHeader';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -123,11 +124,18 @@ export default function HomeScreen() {
   // Sensor values (demo)
   const [temperature, setTemperature] = useState(26.5);
   const [humidity, setHumidity] = useState(64);
-  const [soilMoisture, setSoilMoisture] = useState(42);
+  const [soilMoisture, setSoilMoisture] = useState(25);
 
   // Device controls
   const [manualControl, setManualControl] = useState(false);
   const [pumpAuto, setPumpAuto] = useState(true);
+
+  // Device info
+  const [deviceName, setDeviceName] = useState('Greenhouse A');
+  const [isOnline, setIsOnline] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState('Cập nhật 2 giây trước');
+
+  const onSelectDevice = (device: string) => setDeviceName(device);
 
   // Simulate live sensor data
   useEffect(() => {
@@ -144,18 +152,17 @@ export default function HomeScreen() {
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#FFFFFF', dark: '#151718' }}
       headerImage={
-        <View style={styles.headerLogoWrapper}>
-          <Image
-            source={require('@/assets/images/LogoVinaSoil.png')}
-            style={styles.headerLogo}
-            contentFit="contain"
-          />
-        </View>
+        <DeviceHeader
+          deviceName={deviceName}
+          isOnline={isOnline}
+          lastUpdated={lastUpdated}
+          temperature={temperature}
+          humidity={humidity}
+          soilMoisture={soilMoisture}
+          onSelectDevice={onSelectDevice}
+        />
       }
     >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Vina Smart Soil</ThemedText>
-      </ThemedView>
 
       {/* Sensor Gauges */}
       <ThemedView style={styles.section}>
@@ -170,10 +177,28 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.gaugesRow}>
-            <Gauge value={soilMoisture} {...GAUGE_CONFIG.soilMoisture} />
+            <Gauge value={soilMoisture} maxValue={GAUGE_CONFIG.soilMoisture.maxValue} label={GAUGE_CONFIG.soilMoisture.label} unit={GAUGE_CONFIG.soilMoisture.unit} color={soilMoisture < 30 ? '#FF3B5C' : GAUGE_CONFIG.soilMoisture.color} icon={GAUGE_CONFIG.soilMoisture.icon} />
             <View style={{ width: GAUGE_SIZE_BASE }} /> {/* placeholder cho layout cân đối */}
           </View>
         </View>
+
+        {/* Soil Moisture Suggestion */}
+        {(() => {
+          console.log('Soil Moisture:', soilMoisture, 'Show suggestion:', soilMoisture < 30);
+          return soilMoisture < 100 && (
+            <ThemedView style={styles.suggestion}>
+              <Ionicons name="water" size={24} color="#FF3B5C" style={styles.suggestionIcon} />
+              <View style={styles.suggestionTextContainer}>
+                <ThemedText type="defaultSemiBold" style={styles.suggestionTitle}>
+                  Đề xuất
+                </ThemedText>
+                <ThemedText style={styles.suggestionMessage}>
+                  Tưới nước cho đất để duy trì độ ẩm
+                </ThemedText>
+              </View>
+            </ThemedView>
+          );
+        })()}
       </ThemedView>
 
       {/* Device Controls */}
@@ -184,14 +209,14 @@ export default function HomeScreen() {
 
         <View style={styles.togglesContainer}>
           <View style={styles.toggleCard}>
-            <ThemedText type="defaultSemiBold">Manual Control</ThemedText>
+            <ThemedText type="defaultSemiBold" style={{ fontWeight: 'bold', color: '#000000' }}>Manual Control</ThemedText>
             <Switch
               value={manualControl}
               onValueChange={setManualControl}
               trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
               thumbColor={manualControl ? '#FFFFFF' : '#F4F3F4'}
               ios_backgroundColor="#E5E7EB"
-              style={{ transform: [{ scale: 1.2 }] }}
+              style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
             />
             <ThemedText
               style={{
@@ -206,14 +231,14 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.toggleCard}>
-            <ThemedText type="defaultSemiBold">Pump Auto</ThemedText>
+            <ThemedText type="defaultSemiBold" style={{ fontWeight: 'bold', color: '#000000' }}>Pump Auto</ThemedText>
             <Switch
               value={pumpAuto}
               onValueChange={setPumpAuto}
               trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
               thumbColor={pumpAuto ? '#FFFFFF' : '#F4F3F4'}
               ios_backgroundColor="#E5E7EB"
-              style={{ transform: [{ scale: 1.2 }] }}
+              style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
             />
             <ThemedText
               style={{
@@ -296,5 +321,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  suggestion: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FF3B5C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#FF3B5C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  suggestionIcon: {
+    marginRight: 12,
+  },
+  suggestionTextContainer: {
+    flex: 1,
+  },
+  suggestionTitle: {
+    color: '#FF3B5C',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  suggestionMessage: {
+    color: '#333333',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
