@@ -265,8 +265,9 @@ const styles = StyleSheet.create({
   },
   togglesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
+    justifyContent: 'center',
+    gap: 20,
+    alignItems: 'center',
   },
   toggleCard: {
     alignItems: 'center',
