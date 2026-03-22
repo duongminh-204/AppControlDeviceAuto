@@ -11,6 +11,7 @@ export default function ModalsLayout() {
     >
       <Stack.Screen name="modal" options={{ title: 'Modal' }} />
       <Stack.Screen name="scan-qr" options={{ title: 'Quét mã QR' }} />
+      <Stack.Screen name="chatbot" options={{ title: 'Chatbot' }} />
     </Stack>
   );
 }

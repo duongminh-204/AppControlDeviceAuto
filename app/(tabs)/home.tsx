@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { memo, useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Switch, View } from 'react-native';
+import { Dimensions, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -149,132 +150,163 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#FFFFFF', dark: '#151718' }}
-      headerImage={
-        <DeviceHeader
-          deviceName={deviceName}
-          isOnline={isOnline}
-          lastUpdated={lastUpdated}
-          temperature={temperature}
-          humidity={humidity}
-          soilMoisture={soilMoisture}
-          onSelectDevice={onSelectDevice}
-        />
-      }
-    >
-      {/* Sensor Gauges */}
-      <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={{ marginBottom: 16 }}>
-          Chỉ số cảm biến thời gian thực
-        </ThemedText>
+    <View style={styles.screenContainer}>
+      <ParallaxScrollView
+        headerBackgroundColor={{ light: '#FFFFFF', dark: '#151718' }}
+        headerImage={
+          <DeviceHeader
+            deviceName={deviceName}
+            isOnline={isOnline}
+            lastUpdated={lastUpdated}
+            temperature={temperature}
+            humidity={humidity}
+            soilMoisture={soilMoisture}
+            onSelectDevice={onSelectDevice}
+          />
+        }
+      >
+        {/* Sensor Gauges */}
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle" style={{ marginBottom: 16 }}>
+            Chỉ số cảm biến thời gian thực
+          </ThemedText>
 
-        <View>
-          <View style={styles.gaugesRow}>
-            <Gauge value={temperature} {...GAUGE_CONFIG.temperature} />
-            <Gauge value={humidity} {...GAUGE_CONFIG.humidity} />
-          </View>
-
-          <View style={styles.gaugesRow}>
-            <Gauge
-              value={soilMoisture}
-              maxValue={GAUGE_CONFIG.soilMoisture.maxValue}
-              label={GAUGE_CONFIG.soilMoisture.label}
-              unit={GAUGE_CONFIG.soilMoisture.unit}
-              color={soilMoisture < 30 ? '#FF3B5C' : GAUGE_CONFIG.soilMoisture.color}
-              icon={GAUGE_CONFIG.soilMoisture.icon}
-            />
-            <View style={{ width: GAUGE_SIZE_BASE }} /> {/* placeholder cho layout cân đối */}
-          </View>
-        </View>
-
-        {/* Soil Moisture Suggestion - ĐÃ SỬA LỖI TEXT STRING */}
-        {soilMoisture < 30 ? (
-          <ThemedView style={styles.suggestion}>
-            <Ionicons name="water" size={24} color="#FF3B5C" style={styles.suggestionIcon} />
-            <View style={styles.suggestionTextContainer}>
-              <ThemedText type="defaultSemiBold" style={styles.suggestionTitle}>
-                Đề xuất
-              </ThemedText>
-              <ThemedText style={styles.suggestionMessage}>
-                Tưới nước cho đất để duy trì độ ẩm
-              </ThemedText>
+          <View>
+            <View style={styles.gaugesRow}>
+              <Gauge value={temperature} {...GAUGE_CONFIG.temperature} />
+              <Gauge value={humidity} {...GAUGE_CONFIG.humidity} />
             </View>
-          </ThemedView>
-        ) : null}
-      </ThemedView>
 
-      {/* Device Controls */}
-      <ThemedView style={[styles.section, styles.lastSection]}>
-        <ThemedText type="subtitle" style={{ marginBottom: 20 }}>
-          Điều khiển thiết bị
-        </ThemedText>
+            <View style={styles.gaugesRow}>
+              <Gauge
+                value={soilMoisture}
+                maxValue={GAUGE_CONFIG.soilMoisture.maxValue}
+                label={GAUGE_CONFIG.soilMoisture.label}
+                unit={GAUGE_CONFIG.soilMoisture.unit}
+                color={soilMoisture < 30 ? '#FF3B5C' : GAUGE_CONFIG.soilMoisture.color}
+                icon={GAUGE_CONFIG.soilMoisture.icon}
+              />
+              <View style={{ width: GAUGE_SIZE_BASE }} /> {/* placeholder cho layout cân đối */}
+            </View>
+          </View>
 
-        <View style={styles.togglesContainer}>
-          <View style={styles.toggleCard}>
-            <ThemedText 
-              type="defaultSemiBold" 
-              style={{ fontWeight: 'bold', color: '#000000' }}
-            >
-              Manual Control
-            </ThemedText>
-            <Switch
-              value={manualControl}
-              onValueChange={setManualControl}
-              trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
-              thumbColor={manualControl ? '#FFFFFF' : '#F4F3F4'}
-              ios_backgroundColor="#E5E7EB"
-              style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
-            />
-            <View>
+          {/* Soil Moisture Suggestion - ĐÃ SỬA LỖI TEXT STRING */}
+          {soilMoisture < 30 ? (
+            <ThemedView style={styles.suggestion}>
+              <Ionicons name="water" size={24} color="#FF3B5C" style={styles.suggestionIcon} />
+              <View style={styles.suggestionTextContainer}>
+                <ThemedText type="defaultSemiBold" style={styles.suggestionTitle}>
+                  Đề xuất
+                </ThemedText>
+                <ThemedText style={styles.suggestionMessage}>
+                  Tưới nước cho đất để duy trì độ ẩm
+                </ThemedText>
+              </View>
+            </ThemedView>
+          ) : null}
+        </ThemedView>
+        {/* Test Chatbot Button */}
+        <TouchableOpacity
+          onPress={() => router.push('/modals/chatbot')}
+          style={{
+            backgroundColor: '#50C878',
+            padding: 16,
+            borderRadius: 12,
+            marginBottom: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          activeOpacity={0.7}
+        >
+          <ThemedText style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+            Open Chatbot
+          </ThemedText>
+        </TouchableOpacity>
+        {/* Device Controls */}
+        <ThemedView style={[styles.section, styles.lastSection]}>
+          <ThemedText type="subtitle" style={{ marginBottom: 20 }}>
+            Điều khiển thiết bị
+          </ThemedText>
+
+
+          <View style={styles.togglesContainer}>
+            <View style={styles.toggleCard}>
               <ThemedText
-                style={{
-                  fontSize: 12,
-                  opacity: 0.85,
-                  marginTop: 4,
-                  color: manualControl ? '#16A34A' : '#6B7280',
-                }}
+                type="defaultSemiBold"
+                style={{ fontWeight: 'bold', color: '#000000' }}
               >
-                {manualControl ? 'Bật - Điều khiển thủ công' : 'Tắt'}
+                Manual Control
               </ThemedText>
+              <Switch
+                value={manualControl}
+                onValueChange={setManualControl}
+                trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
+                thumbColor={manualControl ? '#FFFFFF' : '#F4F3F4'}
+                ios_backgroundColor="#E5E7EB"
+                style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
+              />
+              <View>
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.85,
+                    marginTop: 4,
+                    color: manualControl ? '#16A34A' : '#6B7280',
+                  }}
+                >
+                  {manualControl ? 'Bật - Điều khiển thủ công' : 'Tắt'}
+                </ThemedText>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.toggleCard}>
-            <ThemedText 
-              type="defaultSemiBold" 
-              style={{ fontWeight: 'bold', color: '#000000' }}
-            >
-              Pump Auto
-            </ThemedText>
-            <Switch
-              value={pumpAuto}
-              onValueChange={setPumpAuto}
-              trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
-              thumbColor={pumpAuto ? '#FFFFFF' : '#F4F3F4'}
-              ios_backgroundColor="#E5E7EB"
-              style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
-            />
-            <View>
+            <View style={styles.toggleCard}>
               <ThemedText
-                style={{
-                  fontSize: 12,
-                  opacity: 0.85,
-                  marginTop: 4,
-                  color: pumpAuto ? '#16A34A' : '#6B7280',
-                }}
+                type="defaultSemiBold"
+                style={{ fontWeight: 'bold', color: '#000000' }}
               >
-                {pumpAuto ? 'Bật - Bơm tự động' : 'Tắt'}
+                Pump Auto
               </ThemedText>
+              <Switch
+                value={pumpAuto}
+                onValueChange={setPumpAuto}
+                trackColor={{ false: '#E5E7EB', true: '#16A34A' }}
+                thumbColor={pumpAuto ? '#FFFFFF' : '#F4F3F4'}
+                ios_backgroundColor="#E5E7EB"
+                style={{ transform: [{ scale: 1.2 }], marginTop: 12 }}
+              />
+              <View>
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.85,
+                    marginTop: 4,
+                    color: pumpAuto ? '#16A34A' : '#6B7280',
+                  }}
+                >
+                  {pumpAuto ? 'Bật - Bơm tự động' : 'Tắt'}
+                </ThemedText>
+              </View>
             </View>
           </View>
-        </View>
-      </ThemedView>
-    </ParallaxScrollView>
+        </ThemedView>
+      </ParallaxScrollView>
+
+      {/* Floating Action Button - Chatbot */}
+      <TouchableOpacity
+        onPress={() => router.push('/modals/chatbot')}
+        style={styles.floatingButton}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="chatbubble" size={28} color="white" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+  },
   section: {
     marginBottom: 28,
     gap: 8,
@@ -352,5 +384,22 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontSize: 14,
     lineHeight: 20,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#50C878',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    zIndex: 999,
   },
 });

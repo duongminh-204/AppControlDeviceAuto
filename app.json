@@ -45,7 +45,8 @@
         {
           "cameraPermission": "Cho phép ứng dụng truy cập camera để quét mã QR thiết bị."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
