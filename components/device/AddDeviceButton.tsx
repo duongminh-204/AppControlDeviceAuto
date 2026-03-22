@@ -1,18 +1,17 @@
+import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function AddDeviceButton() {
   const theme = useColorScheme() ?? 'light';
 
   const handlePress = () => {
-    // Cách 1: chuyển sang modal quét QR
+  
     router.push('/modals/scan-qr');
 
-    // Cách 2: nếu muốn truyền param (ví dụ mode)
-    // router.push({ pathname: '/modals/scan-qr', params: { purpose: 'add-device' } });
+    
   };
 
   return (
@@ -36,7 +35,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginHorizontal: 4,
+    marginHorizontal: 16,
     marginVertical: 12,
     paddingVertical: 14,
     borderRadius: 12,
