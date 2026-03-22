@@ -53,15 +53,15 @@ export default function DeviceHeader({
       <View style={styles.sensorsRow}>
         <View style={styles.sensorItem}>
           <Ionicons name="thermometer" size={16} color="#FF5722" />
-          <ThemedText style={styles.sensorValue}>{temperature}°C</ThemedText>
+          <ThemedText style={styles.sensorValue}>{Math.round(temperature)}°C</ThemedText>
         </View>
         <View style={styles.sensorItem}>
           <Ionicons name="water" size={16} color="#2196F3" />
-          <ThemedText style={styles.sensorValue}>{humidity}%</ThemedText>
+          <ThemedText style={styles.sensorValue}>{Math.round(humidity)}%</ThemedText>
         </View>
         <View style={styles.sensorItem}>
           <Ionicons name="leaf" size={16} color="#4CAF50" />
-          <ThemedText style={styles.sensorValue}>{soilMoisture}%</ThemedText>
+          <ThemedText style={styles.sensorValue}>{Math.round(soilMoisture)}%</ThemedText>
         </View>
       </View>
 
