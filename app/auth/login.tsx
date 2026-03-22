@@ -1,32 +1,36 @@
 import { useState } from 'react';
 import {
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  Dimensions,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from 'react-native';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
+// const API_BASE_URL = 'http://192.168.1.7:3000';
+const API_BASE_URL = 'http://192.168.1.7:3000';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Animation khi focus input
+  // Animation focus input
   const emailScale = useSharedValue(1);
   const passwordScale = useSharedValue(1);
 
@@ -38,29 +42,55 @@ export default function LoginScreen() {
     transform: [{ scale: passwordScale.value }],
   }));
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert('Vui lòng nhập email và mật khẩu');
+      return;
+    }
+
     setIsLoading(true);
-    // TODO: Thêm logic đăng nhập thật (API, Firebase, Supabase, Clerk, etc.)
-    // Ví dụ: gọi API, lưu token, redirect về home
-    setTimeout(() => {
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Đăng nhập thất bại');
+      }
+
+      const data = await response.json();
+      const token = data.token || data.accessToken;
+
+      if (!token) throw new Error('Không nhận được token');
+
+      await AsyncStorage.setItem('authToken', token);
+      router.replace('/(tabs)/home'); // redirect vào tabs
+    } catch (error: any) {
+      alert(error?.message || 'Có lỗi xảy ra, thử lại nhé!');
+    } finally {
       setIsLoading(false);
-      alert('Đăng nhập thành công! (Demo)');
-      // router.replace('/(tabs)/home'); // hoặc dashboard
-    }, 1500);
+    }
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}>
-        <ThemedView style={styles.innerContainer}>
+        style={styles.container}
+      >
+        <View style={styles.innerContainer}>
           <View style={styles.brandContainer}>
+            <Image
+              source={require('@/assets/images/LogoVinaSoil.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <ThemedText type="title" style={styles.title}>
-              Vina Smart soil
-            </ThemedText>
-            <ThemedText type="default" style={styles.subtitle}>
-              Đăng nhập để quản lý hệ thống thiết bị của bạn
+              Vina Smart Soil
             </ThemedText>
           </View>
 
@@ -71,19 +101,14 @@ export default function LoginScreen() {
               </ThemedText>
               <TextInput
                 style={styles.input}
-                placeholder="Nhập email của bạn"
+                placeholder="Nhập email"
                 placeholderTextColor="#888"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoCorrect={false}
-                onFocus={() => {
-                  emailScale.value = withTiming(1.03, { duration: 200 });
-                }}
-                onBlur={() => {
-                  emailScale.value = withTiming(1, { duration: 200 });
-                }}
+                onFocus={() => emailScale.value = withTiming(1.03, { duration: 200 })}
+                onBlur={() => emailScale.value = withTiming(1, { duration: 200 })}
               />
             </Animated.View>
 
@@ -99,12 +124,8 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
-                onFocus={() => {
-                  passwordScale.value = withTiming(1.03, { duration: 200 });
-                }}
-                onBlur={() => {
-                  passwordScale.value = withTiming(1, { duration: 200 });
-                }}
+                onFocus={() => passwordScale.value = withTiming(1.03, { duration: 200 })}
+                onBlur={() => passwordScale.value = withTiming(1, { duration: 200 })}
               />
             </Animated.View>
 
@@ -112,32 +133,33 @@ export default function LoginScreen() {
               style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
-              activeOpacity={0.8}>
+            >
               <ThemedText style={styles.buttonText}>
                 {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </ThemedText>
             </TouchableOpacity>
 
             <View style={styles.linksRow}>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity>
                 <ThemedText style={styles.linkText}>Quên mật khẩu?</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
-                <ThemedText style={styles.linkText}>Tạo tài khoản mới</ThemedText>
+              <TouchableOpacity>
+                <ThemedText style={styles.linkText}>Tạo tài khoản</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
-        </ThemedView>
+        </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    backgroundColor: '#F0FDF4', // nền sáng, xanh lá rất nhẹ
+    backgroundColor: '#FFFFFF', // nền trắng full như bạn yêu cầu
   },
   innerContainer: {
     flex: 1,
@@ -154,12 +176,22 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 460,
     marginBottom: 24,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 140,
+    height: 140,
+    marginBottom: 16,
   },
   title: {
     fontSize: 34,
     marginBottom: 6,
     textAlign: 'center',
     letterSpacing: 0.3,
+  },
+  brandStrong: {
+    fontSize: 34,
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 16,

@@ -1,50 +1,80 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarActiveTintColor: Colors[colorScheme].tint,
+        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarStyle: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           borderTopWidth: 0,
-          elevation: 12,
+          elevation: 0,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          backgroundColor: colorScheme === 'dark' ? '#020617' : '#FFFFFF',
-          paddingBottom: 6,
-          paddingTop: 4,
-          height: 64,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.14,
+          shadowRadius: 20,
+          backgroundColor:
+            colorScheme === 'dark' ? '#0f172a' : '#ffffff',
+          borderRadius: 0,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          paddingHorizontal: 16,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginBottom: 4,
         },
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+      }}
+    >
+      {/* Tab chính - Dashboard */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Trang chủ',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size ?? 26} name="house.fill" color={color} />
+          ),
         }}
       />
+
+      
       <Tabs.Screen
-        name="explore"
+        name="managedevice"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Thiết bị',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol size={size ?? 26} name="desktopcomputer" color={color} />
+          ),
+        }}
+      />
+
+      {/* Tab hồ sơ */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol
+              size={size ?? 26}
+              name="person.crop.circle.fill"
+              color={color}
+            />
+          ),
         }}
       />
     </Tabs>
