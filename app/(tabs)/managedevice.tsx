@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 60,
   },
   title: {
     marginBottom: 4,
