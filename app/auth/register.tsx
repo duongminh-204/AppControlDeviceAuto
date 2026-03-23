@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Dimensions,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
@@ -23,7 +23,6 @@ import * as Network from 'expo-network';
 import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-
 
 const getApiBaseUrl = async (): Promise<string> => {
   try {
@@ -41,7 +40,7 @@ const getApiBaseUrl = async (): Promise<string> => {
         const foundUrl = await findServerIP(base, 3000);
         if (foundUrl) {
           console.log('[API Config] Auto-detected server at:', foundUrl);
-          await AsyncStorage.setItem('apiBaseUrl', foundUrl); 
+          await AsyncStorage.setItem('apiBaseUrl', foundUrl);
           return foundUrl;
         }
       }
@@ -91,22 +90,22 @@ async function findServerIP(base: string, port: number): Promise<string | null> 
   return found ? `http://${found}:${port}` : null;
 }
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiBaseUrl, setApiBaseUrl] = useState('http://192.168.0.104:3000'); 
+  const [apiBaseUrl, setApiBaseUrl] = useState('http://192.168.0.104:3000');
 
- 
   useEffect(() => {
     getApiBaseUrl().then((url) => {
       setApiBaseUrl(url);
     });
   }, []);
 
-
   const emailScale = useSharedValue(1);
   const passwordScale = useSharedValue(1);
+  const confirmPasswordScale = useSharedValue(1);
 
   const animatedEmailStyle = useAnimatedStyle(() => ({
     transform: [{ scale: emailScale.value }],
@@ -116,21 +115,30 @@ export default function LoginScreen() {
     transform: [{ scale: passwordScale.value }],
   }));
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      alert('Vui lòng nhập email và mật khẩu');
+  const animatedConfirmPasswordStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: confirmPasswordScale.value }],
+  }));
+
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      alert('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('Mật khẩu xác nhận không khớp');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      console.log('[Login] Calling:', `${apiBaseUrl}/login`);
+      console.log('[Register] Calling:', `${apiBaseUrl}/register`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); 
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(`${apiBaseUrl}/login`, {
+      const response = await fetch(`${apiBaseUrl}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -141,24 +149,21 @@ export default function LoginScreen() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || 'Đăng nhập thất bại');
+        throw new Error(errorText || 'Đăng ký thất bại');
       }
 
       const data = await response.json();
-      const token = data.token || data.accessToken;
-
-      if (!token) throw new Error('Không nhận được token');
-
-      await AsyncStorage.setItem('authToken', token);
-      router.replace('/(tabs)/home');
+      alert('Đăng ký thành công! Vui lòng đăng nhập.');
+      router.replace('/auth/login');
     } catch (error: any) {
-      console.log('─── Login Error Details ───');
+      console.log('─── Register Error Details ───');
       console.log('Message:', error.message);
       console.log('Name:', error.name);
-      console.log('URL called:', `${apiBaseUrl}/login`);
+      console.log('URL called:', `${apiBaseUrl}/register`);
 
       if (error.name === 'AbortError') {
         alert('Kết nối timeout – kiểm tra server/mạng nhé!');
+        
       } else {
         alert(error?.message || 'Có lỗi xảy ra, thử lại nhé!');
       }
@@ -220,22 +225,36 @@ export default function LoginScreen() {
               />
             </Animated.View>
 
+            <Animated.View style={[styles.inputContainer, animatedConfirmPasswordStyle]}>
+              <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
+                Xác nhận mật khẩu
+              </ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập lại mật khẩu"
+                placeholderTextColor="#888"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                onFocus={() => confirmPasswordScale.value = withTiming(1.03, { duration: 200 })}
+                onBlur={() => confirmPasswordScale.value = withTiming(1, { duration: 200 })}
+              />
+            </Animated.View>
+
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
+              onPress={handleRegister}
               disabled={isLoading}
             >
               <ThemedText style={styles.buttonText}>
-                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
               </ThemedText>
             </TouchableOpacity>
 
             <View style={styles.linksRow}>
-              <TouchableOpacity>
-                <ThemedText style={styles.linkText}>Quên mật khẩu?</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/auth/register')}>
-                <ThemedText style={styles.linkText}>Tạo tài khoản</ThemedText>
+              <TouchableOpacity onPress={() => router.replace('/auth/login')}>
+                <ThemedText style={styles.linkText}>Đã có tài khoản? Đăng nhập</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -327,7 +346,7 @@ const styles = StyleSheet.create({
   },
   linksRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
   },
