@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -19,18 +19,92 @@ import Animated, {
 
 import { ThemedText } from '@/components/themed-text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Network from 'expo-network';
 import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-// const API_BASE_URL = 'http://192.168.1.7:3000';
-const API_BASE_URL = 'http://192.168.1.7:3000';
+
+
+const getApiBaseUrl = async (): Promise<string> => {
+  try {
+    const storedUrl = await AsyncStorage.getItem('apiBaseUrl');
+    if (storedUrl) {
+      return storedUrl;
+    }
+
+    // Auto-detect server IP on the same network
+    const deviceIP = await Network.getIpAddressAsync();
+    if (deviceIP && deviceIP !== 'unknown') {
+      const parts = deviceIP.split('.');
+      if (parts.length === 4) {
+        const base = parts.slice(0, 3).join('.') + '.';
+        const foundUrl = await findServerIP(base, 3000);
+        if (foundUrl) {
+          console.log('[API Config] Auto-detected server at:', foundUrl);
+          await AsyncStorage.setItem('apiBaseUrl', foundUrl); 
+          return foundUrl;
+        }
+      }
+    }
+
+    const fallbackUrl = 'http://192.168.0.104:3000';
+    return fallbackUrl;
+  } catch (e) {
+    console.error('[API Config] Error detecting URL:', e);
+    return 'http://192.168.0.104:3000';
+  }
+};
+
+// Function to scan network for server
+async function findServerIP(base: string, port: number): Promise<string | null> {
+  console.log('[Auto-detect] Scanning network with base:', base);
+  const promises = [];
+  for (let i = 100; i <= 120; i++) { // Scan range, adjust if needed
+    const ip = `${base}${i}`;
+    console.log('[Auto-detect] Trying IP:', ip);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    promises.push(
+      fetch(`http://${ip}:${port}/ping`, {
+        method: 'GET',
+        signal: controller.signal,
+      })
+        .then(() => {
+          clearTimeout(timeoutId);
+          console.log('[Auto-detect] Found server at:', ip);
+          return ip;
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          return null;
+        })
+    );
+  }
+  const results = await Promise.all(promises);
+  const found = results.find(ip => ip !== null);
+  if (found) {
+    console.log('[Auto-detect] Server found at:', found);
+  } else {
+    console.log('[Auto-detect] No server found in range');
+    alert('Không tìm thấy server trên mạng. Kiểm tra backend có chạy /ping và cùng mạng WiFi.');
+  }
+  return found ? `http://${found}:${port}` : null;
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [apiBaseUrl, setApiBaseUrl] = useState('http://192.168.0.104:3000'); 
 
-  // Animation focus input
+ 
+  useEffect(() => {
+    getApiBaseUrl().then((url) => {
+      setApiBaseUrl(url);
+    });
+  }, []);
+
+
   const emailScale = useSharedValue(1);
   const passwordScale = useSharedValue(1);
 
@@ -51,11 +125,19 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      console.log('[Login] Calling:', `${apiBaseUrl}/login`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); 
+
+      const response = await fetch(`${apiBaseUrl}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -68,9 +150,18 @@ export default function LoginScreen() {
       if (!token) throw new Error('Không nhận được token');
 
       await AsyncStorage.setItem('authToken', token);
-      router.replace('/(tabs)/home'); // redirect vào tabs
+      router.replace('/(tabs)/home');
     } catch (error: any) {
-      alert(error?.message || 'Có lỗi xảy ra, thử lại nhé!');
+      console.log('─── Login Error Details ───');
+      console.log('Message:', error.message);
+      console.log('Name:', error.name);
+      console.log('URL called:', `${apiBaseUrl}/login`);
+
+      if (error.name === 'AbortError') {
+        alert('Kết nối timeout – kiểm tra server/mạng nhé!');
+      } else {
+        alert(error?.message || 'Có lỗi xảy ra, thử lại nhé!');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -154,12 +245,11 @@ export default function LoginScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF', // nền trắng full như bạn yêu cầu
+    backgroundColor: '#FFFFFF',
   },
   innerContainer: {
     flex: 1,
@@ -167,10 +257,6 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerImage: {
-    width: 0,
-    height: 0,
   },
   brandContainer: {
     width: '100%',
@@ -188,17 +274,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'center',
     letterSpacing: 0.3,
-  },
-  brandStrong: {
-    fontSize: 34,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.9,
-    marginTop: 4,
-    marginBottom: 8,
-    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -228,7 +303,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.6)', // viền xanh lá nhẹ
+    borderColor: 'rgba(74,222,128,0.6)',
   },
   button: {
     backgroundColor: '#16A34A',
