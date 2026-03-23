@@ -23,7 +23,7 @@ const { width, height } = Dimensions.get('window');
 // Phải khớp với "scheme" trong app.json
 const APP_SCHEME = 'myapp';
 
-const GOOGLE_AUTH_FALLBACK_BASE = 'https://6fc5-42-119-42-58.ngrok-free.app';
+const GOOGLE_AUTH_FALLBACK_BASE = 'https://2a38-42-119-42-58.ngrok-free.app';
 const GOOGLE_AUTH_ENDPOINTS = [
   '/auth/google',
   '/api/auth/google',
@@ -125,7 +125,18 @@ export default function LoginScreen() {
       if (!url.startsWith(`${APP_SCHEME}://`)) return;
 
       const parsed = Linking.parse(url);
-      const token = parsed.queryParams?.token as string | undefined;
+
+      // ← Thay bằng đoạn xử lý an toàn
+      const queryParams = parsed.queryParams;
+      let token: string | undefined;
+
+      if (queryParams?.token) {
+        if (Array.isArray(queryParams.token)) {
+          token = queryParams.token[0]; // lấy giá trị đầu tiên nếu có nhiều
+        } else {
+          token = queryParams.token;
+        }
+      }
 
       if (token) {
         AsyncStorage.setItem('authToken', token)
@@ -136,6 +147,7 @@ export default function LoginScreen() {
           .catch((err) => console.error('Lưu token thất bại:', err));
       } else {
         console.log('[Deep link] Không tìm thấy token trong URL:', url);
+        // hoặc alert('Không tìm thấy token trong link') nếu bạn muốn hiển thị thông báo
       }
     };
 
@@ -198,27 +210,50 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      let authUrl = await findGoogleAuthEndpoint(apiBaseUrl);
 
-      // Nếu local không có → thử fallback ngrok
-      if (!authUrl && apiBaseUrl !== GOOGLE_AUTH_FALLBACK_BASE) {
-        authUrl = await findGoogleAuthEndpoint(GOOGLE_AUTH_FALLBACK_BASE);
-      }
+      let authUrl = await findGoogleAuthEndpoint(GOOGLE_AUTH_FALLBACK_BASE);
+
 
       if (!authUrl) {
-        alert('Không tìm thấy endpoint Google OAuth.\nKiểm tra backend có route /auth/google không.');
-        return;
+
+        if (apiBaseUrl !== GOOGLE_AUTH_FALLBACK_BASE) {
+          authUrl = await findGoogleAuthEndpoint(apiBaseUrl);
+        }
+        if (!authUrl) {
+          alert(
+            'Không thể kết nối Google OAuth.\n' +
+            'Kiểm tra:\n' +
+            '1. Ngrok đang chạy (ngrok http 3000)\n' +
+            '2. Backend expose /auth/google\n' +
+            '3. GOOGLE_CALLBACK_URL trong .env khớp chính xác với ngrok URL[](https://xxxx.ngrok-free.app/auth/google/callback)\n' +
+            '4. Google Console Allowed redirect URIs có chứa đúng URL ngrok callback'
+          );
+          return;
+        }
       }
 
-      console.log('[Google] Mở auth URL:', authUrl);
+      console.log('[Google Login] Sử dụng URL (ngrok forced):', authUrl);
 
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, `${APP_SCHEME}://callback`, {
-        preferEphemeralSession: true, // Không lưu session cũ
-      });
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        `${APP_SCHEME}://callback`,
+        { preferEphemeralSession: true }
+      );
 
       if (result.type === 'success' && result.url) {
         const parsed = Linking.parse(result.url);
-        const token = parsed.queryParams?.token as string | undefined;
+
+        // ← Thay bằng đoạn xử lý an toàn
+        const queryParams = parsed.queryParams;
+        let token: string | undefined;
+
+        if (queryParams?.token) {
+          if (Array.isArray(queryParams.token)) {
+            token = queryParams.token[0]; // lấy giá trị đầu tiên nếu có nhiều
+          } else {
+            token = queryParams.token;
+          }
+        }
 
         if (token) {
           await AsyncStorage.setItem('authToken', token);
@@ -226,17 +261,22 @@ export default function LoginScreen() {
         } else {
           alert('Không nhận được token từ Google login');
         }
+
       } else if (result.type === 'dismiss') {
-        console.log('Người dùng đã hủy Google login');
+        console.log('User hủy Google login');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google login error:', error);
-      alert('Không thể mở trình duyệt Google.\nKiểm tra mạng và server backend.');
+      alert(
+        'Lỗi khi mở Google OAuth:\n' +
+        '- Kiểm tra ngrok chạy và backend OK?\n' +
+        '- .env GOOGLE_CALLBACK_URL phải khớp 100% với ngrok (https, không dư /)\n' +
+        '- Google Console redirect URIs phải khớp chính xác'
+      );
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
