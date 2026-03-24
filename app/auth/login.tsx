@@ -1,3 +1,9 @@
+import { ThemedText } from '@/components/themed-text';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+import * as Network from 'expo-network';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import {
   Dimensions,
@@ -11,28 +17,43 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-
-import { ThemedText } from '@/components/themed-text';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Network from 'expo-network';
-import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
+// Phải khớp với "scheme" trong app.json
+const APP_SCHEME = 'myapp';
+
+const GOOGLE_AUTH_FALLBACK_BASE = 'http://192.168.0.103:3000';
+const GOOGLE_AUTH_ENDPOINTS = [
+  '/auth/google',
+  '/api/auth/google',
+  '/auth/google/login',
+  '/api/v1/auth/google',
+  '/oauth/google',
+];
+
+const findGoogleAuthEndpoint = async (baseUrl: string): Promise<string | null> => {
+  const normalized = baseUrl.replace(/\/$/, '');
+  for (const endpoint of GOOGLE_AUTH_ENDPOINTS) {
+    const candidate = `${normalized}${endpoint}`;
+    try {
+      const response = await fetch(candidate, { method: 'GET', redirect: 'manual' });
+      console.log('[Google Auth probe]', candidate, '→ status', response.status);
+      if ([301, 302, 307, 308, 200, 401, 403].includes(response.status)) {
+        return candidate;
+      }
+    } catch (err) {
+      console.log('[Google probe failed]', candidate, err);
+    }
+  }
+  return null;
+};
 
 const getApiBaseUrl = async (): Promise<string> => {
   try {
-    const storedUrl = await AsyncStorage.getItem('apiBaseUrl');
-    if (storedUrl) {
-      return storedUrl;
-    }
+    // const storedUrl = await AsyncStorage.getItem('apiBaseUrl');
+    // if (storedUrl) return storedUrl; bỏ cache để mỗi lần login đều thử auto-detect lại
 
-    // Auto-detect server IP on the same network
     const deviceIP = await Network.getIpAddressAsync();
     if (deviceIP && deviceIP !== 'unknown') {
       const parts = deviceIP.split('.');
@@ -40,30 +61,26 @@ const getApiBaseUrl = async (): Promise<string> => {
         const base = parts.slice(0, 3).join('.') + '.';
         const foundUrl = await findServerIP(base, 3000);
         if (foundUrl) {
-          console.log('[API Config] Auto-detected server at:', foundUrl);
-          await AsyncStorage.setItem('apiBaseUrl', foundUrl); 
+          console.log('[API] Auto-detected:', foundUrl);
+          await AsyncStorage.setItem('apiBaseUrl', foundUrl);
           return foundUrl;
         }
       }
     }
-
-    const fallbackUrl = 'http://192.168.0.104:3000';
-    return fallbackUrl;
+    return GOOGLE_AUTH_FALLBACK_BASE;
   } catch (e) {
-    console.error('[API Config] Error detecting URL:', e);
-    return 'http://192.168.0.104:3000';
+    console.error('[API Config] Error:', e);
+    return GOOGLE_AUTH_FALLBACK_BASE;
   }
 };
 
-// Function to scan network for server
 async function findServerIP(base: string, port: number): Promise<string | null> {
-  console.log('[Auto-detect] Scanning network with base:', base);
-  const promises = [];
-  for (let i = 100; i <= 120; i++) { // Scan range, adjust if needed
+  const promises: Promise<string | null>[] = [];
+  for (let i = 100; i <= 120; i++) {
     const ip = `${base}${i}`;
-    console.log('[Auto-detect] Trying IP:', ip);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     promises.push(
       fetch(`http://${ip}:${port}/ping`, {
         method: 'GET',
@@ -71,7 +88,6 @@ async function findServerIP(base: string, port: number): Promise<string | null> 
       })
         .then(() => {
           clearTimeout(timeoutId);
-          console.log('[Auto-detect] Found server at:', ip);
           return ip;
         })
         .catch(() => {
@@ -80,64 +96,89 @@ async function findServerIP(base: string, port: number): Promise<string | null> 
         })
     );
   }
+
   const results = await Promise.all(promises);
-  const found = results.find(ip => ip !== null);
+  const found = results.find((ip) => ip !== null);
   if (found) {
-    console.log('[Auto-detect] Server found at:', found);
-  } else {
-    console.log('[Auto-detect] No server found in range');
-    alert('Không tìm thấy server trên mạng. Kiểm tra backend có chạy /ping và cùng mạng WiFi.');
+    const url = `http://${found}:${port}`;
+    console.log('[Server found]', url);
+    return url;
   }
-  return found ? `http://${found}:${port}` : null;
+  console.log('[Auto-detect] Không tìm thấy server local');
+  return null;
 }
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiBaseUrl, setApiBaseUrl] = useState('http://192.168.0.104:3000'); 
+  const [apiBaseUrl, setApiBaseUrl] = useState(GOOGLE_AUTH_FALLBACK_BASE);
 
- 
+  // Load API base url khi mount
   useEffect(() => {
-    getApiBaseUrl().then((url) => {
-      setApiBaseUrl(url);
-    });
+    AsyncStorage.removeItem('apiBaseUrl');
+    getApiBaseUrl().then(setApiBaseUrl);
   }, []);
 
+  
+  useEffect(() => {
+    const handleDeepLink = ({ url }: { url: string }) => {
+      if (!url.startsWith(`${APP_SCHEME}://`)) return;
 
-  const emailScale = useSharedValue(1);
-  const passwordScale = useSharedValue(1);
+      const parsed = Linking.parse(url);
 
-  const animatedEmailStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: emailScale.value }],
-  }));
+      
+      const queryParams = parsed.queryParams;
+      let token: string | undefined;
 
-  const animatedPasswordStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: passwordScale.value }],
-  }));
+      if (queryParams?.token) {
+        if (Array.isArray(queryParams.token)) {
+          token = queryParams.token[0]; 
+        } else {
+          token = queryParams.token;
+        }
+      }
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      alert('Vui lòng nhập email và mật khẩu');
+      if (token) {
+        AsyncStorage.setItem('authToken', token)
+          .then(() => {
+            console.log('[Deep link] Token saved, navigating to home');
+            router.replace('/(tabs)/home');
+          })
+          .catch((err) => console.error('Lưu token thất bại:', err));
+      } else {
+        console.log('[Deep link] Không tìm thấy token trong URL:', url);
+        
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+  
+    Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl) handleDeepLink({ url: initialUrl });
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  const handleEmailLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      alert('Vui lòng nhập đầy đủ email và mật khẩu');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      console.log('[Login] Calling:', `${apiBaseUrl}/login`);
+      const url = `${apiBaseUrl}/login`;
+      console.log('[Login] Gọi:', url);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); 
-
-      const response = await fetch(`${apiBaseUrl}/login`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        signal: controller.signal,
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -147,26 +188,96 @@ export default function LoginScreen() {
       const data = await response.json();
       const token = data.token || data.accessToken;
 
-      if (!token) throw new Error('Không nhận được token');
+      if (!token) throw new Error('Không nhận được token từ server');
 
       await AsyncStorage.setItem('authToken', token);
       router.replace('/(tabs)/home');
     } catch (error: any) {
-      console.log('─── Login Error Details ───');
-      console.log('Message:', error.message);
-      console.log('Name:', error.name);
-      console.log('URL called:', `${apiBaseUrl}/login`);
+      console.error('─── Email Login Error ───');
+      console.error('Message:', error.message);
+      console.error('URL:', `${apiBaseUrl}/login`);
 
       if (error.name === 'AbortError') {
-        alert('Kết nối timeout – kiểm tra server/mạng nhé!');
+        alert('Kết nối timeout – kiểm tra server và mạng WiFi');
       } else {
-        alert(error?.message || 'Có lỗi xảy ra, thử lại nhé!');
+        alert(error.message || 'Có lỗi xảy ra, vui lòng thử lại');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+
+    try {
+
+      let authUrl = await findGoogleAuthEndpoint(GOOGLE_AUTH_FALLBACK_BASE);
+
+
+      if (!authUrl) {
+
+        if (apiBaseUrl !== GOOGLE_AUTH_FALLBACK_BASE) {
+          authUrl = await findGoogleAuthEndpoint(apiBaseUrl);
+        }
+        if (!authUrl) {
+          alert(
+            'Không thể kết nối Google OAuth.\n' +
+            'Kiểm tra:\n' +
+            '1. Ngrok đang chạy (ngrok http 3000)\n' +
+            '2. Backend expose /auth/google\n' +
+            '3. GOOGLE_CALLBACK_URL trong .env khớp chính xác với ngrok URL[](https://xxxx.ngrok-free.app/auth/google/callback)\n' +
+            '4. Google Console Allowed redirect URIs có chứa đúng URL ngrok callback'
+          );
+          return;
+        }
+      }
+
+      console.log('[Google Login] Sử dụng URL (ngrok forced):', authUrl);
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        `${APP_SCHEME}://callback`,
+        { preferEphemeralSession: true }
+      );
+
+      if (result.type === 'success' && result.url) {
+        const parsed = Linking.parse(result.url);
+
+       
+        const queryParams = parsed.queryParams;
+        let token: string | undefined;
+
+        if (queryParams?.token) {
+          if (Array.isArray(queryParams.token)) {
+            token = queryParams.token[0];
+          } else {
+            token = queryParams.token;
+          }
+        }
+
+        if (token) {
+          await AsyncStorage.setItem('authToken', token);
+          router.replace('/(tabs)/home');
+        } else {
+          alert('Không nhận được token từ Google login');
+        }
+
+      } else if (result.type === 'dismiss') {
+        console.log('User hủy Google login');
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      alert(
+        'Lỗi khi mở Google OAuth:\n' +
+        '- Kiểm tra ngrok chạy và backend OK?\n' +
+        '- .env GOOGLE_CALLBACK_URL phải khớp 100% với ngrok (https, không dư /)\n' +
+        '- Google Console redirect URIs phải khớp chính xác'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -186,7 +297,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
-            <Animated.View style={[styles.inputContainer, animatedEmailStyle]}>
+            <View style={styles.inputContainer}>
               <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
                 Email
               </ThemedText>
@@ -198,12 +309,11 @@ export default function LoginScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                onFocus={() => emailScale.value = withTiming(1.03, { duration: 200 })}
-                onBlur={() => emailScale.value = withTiming(1, { duration: 200 })}
+                autoCorrect={false}
               />
-            </Animated.View>
+            </View>
 
-            <Animated.View style={[styles.inputContainer, animatedPasswordStyle]}>
+            <View style={styles.inputContainer}>
               <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
                 Mật khẩu
               </ThemedText>
@@ -215,18 +325,27 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
-                onFocus={() => passwordScale.value = withTiming(1.03, { duration: 200 })}
-                onBlur={() => passwordScale.value = withTiming(1, { duration: 200 })}
+                autoCorrect={false}
               />
-            </Animated.View>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
+              onPress={handleEmailLogin}
               disabled={isLoading}
             >
               <ThemedText style={styles.buttonText}>
                 {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.googleButton, isLoading && styles.buttonDisabled]}
+              onPress={handleGoogleLogin}
+              disabled={isLoading}
+            >
+              <ThemedText style={styles.googleButtonText}>
+                {isLoading ? 'Đang xử lý...' : 'Đăng nhập bằng Google'}
               </ThemedText>
             </TouchableOpacity>
 
@@ -321,6 +440,23 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
+    color: 'white',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  googleButtonText: {
     color: 'white',
     fontSize: 17,
     fontWeight: '600',
