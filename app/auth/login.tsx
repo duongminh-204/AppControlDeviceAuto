@@ -171,7 +171,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const url = `${apiBaseUrl}/login`;
+      const url = `${apiBaseUrl}/auth/login`;
       console.log('[Login] Gọi:', url);
 
       const response = await fetch(url, {

@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
@@ -46,11 +46,11 @@ const getApiBaseUrl = async (): Promise<string> => {
       }
     }
 
-    const fallbackUrl = 'http://192.168.0.104:3000';
+    const fallbackUrl = 'http://192.168.0.103:3000';
     return fallbackUrl;
   } catch (e) {
     console.error('[API Config] Error detecting URL:', e);
-    return 'http://192.168.0.104:3000';
+    return 'http://192.168.0.103:3000';
   }
 };
 
@@ -138,7 +138,7 @@ export default function RegisterScreen() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(`${apiBaseUrl}/register`, {
+      const response = await fetch(`${apiBaseUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
