@@ -23,7 +23,7 @@ const { width, height } = Dimensions.get('window');
 // Phải khớp với "scheme" trong app.json
 const APP_SCHEME = 'myapp';
 
-const GOOGLE_AUTH_FALLBACK_BASE = 'https://2a38-42-119-42-58.ngrok-free.app';
+const GOOGLE_AUTH_FALLBACK_BASE = 'http://192.168.0.103:3000';
 const GOOGLE_AUTH_ENDPOINTS = [
   '/auth/google',
   '/api/auth/google',
@@ -51,8 +51,8 @@ const findGoogleAuthEndpoint = async (baseUrl: string): Promise<string | null> =
 
 const getApiBaseUrl = async (): Promise<string> => {
   try {
-    const storedUrl = await AsyncStorage.getItem('apiBaseUrl');
-    if (storedUrl) return storedUrl;
+    // const storedUrl = await AsyncStorage.getItem('apiBaseUrl');
+    // if (storedUrl) return storedUrl; bỏ cache để mỗi lần login đều thử auto-detect lại
 
     const deviceIP = await Network.getIpAddressAsync();
     if (deviceIP && deviceIP !== 'unknown') {
@@ -70,7 +70,7 @@ const getApiBaseUrl = async (): Promise<string> => {
     return GOOGLE_AUTH_FALLBACK_BASE;
   } catch (e) {
     console.error('[API Config] Error:', e);
-    return 'http://192.168.0.104:3000'; // fallback cứng nếu cần
+    return GOOGLE_AUTH_FALLBACK_BASE;
   }
 };
 
@@ -79,7 +79,7 @@ async function findServerIP(base: string, port: number): Promise<string | null> 
   for (let i = 100; i <= 120; i++) {
     const ip = `${base}${i}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1800);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     promises.push(
       fetch(`http://${ip}:${port}/ping`, {
@@ -116,23 +116,24 @@ export default function LoginScreen() {
 
   // Load API base url khi mount
   useEffect(() => {
+    AsyncStorage.removeItem('apiBaseUrl');
     getApiBaseUrl().then(setApiBaseUrl);
   }, []);
 
-  // Xử lý deep link (Google OAuth callback + có thể dùng cho các flow khác)
+  
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
       if (!url.startsWith(`${APP_SCHEME}://`)) return;
 
       const parsed = Linking.parse(url);
 
-      // ← Thay bằng đoạn xử lý an toàn
+      
       const queryParams = parsed.queryParams;
       let token: string | undefined;
 
       if (queryParams?.token) {
         if (Array.isArray(queryParams.token)) {
-          token = queryParams.token[0]; // lấy giá trị đầu tiên nếu có nhiều
+          token = queryParams.token[0]; 
         } else {
           token = queryParams.token;
         }
@@ -147,13 +148,13 @@ export default function LoginScreen() {
           .catch((err) => console.error('Lưu token thất bại:', err));
       } else {
         console.log('[Deep link] Không tìm thấy token trong URL:', url);
-        // hoặc alert('Không tìm thấy token trong link') nếu bạn muốn hiển thị thông báo
+        
       }
     };
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    // Kiểm tra URL khởi động (nếu mở app từ link)
+  
     Linking.getInitialURL().then((initialUrl) => {
       if (initialUrl) handleDeepLink({ url: initialUrl });
     });
@@ -243,13 +244,13 @@ export default function LoginScreen() {
       if (result.type === 'success' && result.url) {
         const parsed = Linking.parse(result.url);
 
-        // ← Thay bằng đoạn xử lý an toàn
+       
         const queryParams = parsed.queryParams;
         let token: string | undefined;
 
         if (queryParams?.token) {
           if (Array.isArray(queryParams.token)) {
-            token = queryParams.token[0]; // lấy giá trị đầu tiên nếu có nhiều
+            token = queryParams.token[0];
           } else {
             token = queryParams.token;
           }
